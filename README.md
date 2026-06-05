@@ -69,6 +69,7 @@ python batch_set_budgets.py --enterprise YOUR_ENTERPRISE --token ghp_xxx --list
    - **Scopes**: 勾选 `manage_billing:enterprise`
 ![alt text](image-2.png)
 ![alt text](image-3.png)
+**截图中的Token已失效，仅用于演示**
 6. 点击 **Generate token**
 7. 复制生成的 token（以 `ghp_` 开头），妥善保存，关闭页面之后无法再次查看。
 ![alt text](image-4.png)
