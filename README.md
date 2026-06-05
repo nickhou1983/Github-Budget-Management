@@ -47,14 +47,19 @@ python batch_set_budgets.py --enterprise YOUR_ENTERPRISE --token ghp_xxx --list
 | `--list` | 列出所有现有用户预算 |
 | `--dry-run` | 仅预览，不实际执行 |
 
-## Token 权限要求
+## 企业名称如何获取
 
-- Fine-grained PAT 需要 Enterprise `Administration` permissions (write)
-- 或使用 `manage_billing:enterprise` scope 的 classic PAT
+- 企业名称可以在 GitHub Enterprise 账户设置中找到，通常是企业 URL 的一部分
 
-## 创建 GitHub PAT Token
+![alt text](image.png)
 
-### 方式一：Classic PAT（推荐，配置简单）
+
+## Token 如何获取
+
+- 使用 `manage_billing:enterprise` scope 的 classic PAT
+
+### 创建 GitHub PAT Token
+
 
 1. 登录 GitHub，点击右上角头像 → **Settings**
 ![alt text](Images/image.png)
