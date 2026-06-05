@@ -57,22 +57,22 @@ python batch_set_budgets.py --enterprise YOUR_ENTERPRISE --token ghp_xxx --list
 ### 方式一：Classic PAT（推荐，配置简单）
 
 1. 登录 GitHub，点击右上角头像 → **Settings**
-![alt text](image.png)
+![alt text](Images/image.png)
 2. 左侧菜单滚动到底部，点击 **Developer settings**
 
 3. 点击 **Personal access tokens** → **Tokens (classic)**
 4. 点击 **Generate new token** → **Generate new token (classic)**
-![alt text](image-1.png)
+![alt text](Images/image-1.png)
 5. 填写信息：
    - **Note**: 填写用途描述，如 `Budget Management`
    - **Expiration**: 选择过期时间
    - **Scopes**: 勾选 `manage_billing:enterprise`
-![alt text](image-2.png)
-![alt text](image-3.png)
+![alt text](Images/image-2.png)
+![alt text](Images/image-3.png)
 **截图中的Token已失效，仅用于演示**
 6. 点击 **Generate token**
 7. 复制生成的 token（以 `ghp_` 开头），妥善保存，关闭页面之后无法再次查看。
-![alt text](image-4.png)
+![alt text](Images/image-4.png)
 
 ### 安全建议
 
