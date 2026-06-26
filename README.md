@@ -198,6 +198,12 @@ python batch_set_budgets.py --list
 
 ## 3. 为成本中心启用单独的 AI Credit Pool
 
+> **功能预告（计划于 2026 年 7 月 1 日前发布）**
+>
+> 该功能可为每个成本中心启用**独立的 AI Credit Pool**，使不同成本中心各自使用归属到自己 License 的 AI Credits，**避免不同成本中心之间对 AI Credits 池的争抢**。
+>
+> 功能预计在 7 月 1 日前正式发布。本脚本是用于通过 REST API 进行配置的示例脚本，**供大家提前了解与熟悉**，正式发布后即可直接使用。
+
 脚本：`enable_ai_credit_pool.py`，根据 **Cost Center 名称** 批量启用（或关闭）AI Credit Pool。启用后，该 Cost Center 仅可使用由归属到它的 License 所提供的 AI Credits。额度由系统自动计算：
 
 - Copilot Business：每个 License 每月 1,900 AI Credits
