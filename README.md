@@ -1,9 +1,14 @@
 # GitHub Budget Management
 
-为 GitHub Enterprise 提供两类批量配置能力：
+为 GitHub Enterprise 提供批量预算与成本中心配置能力：
 
-1. **批量为用户设置 Budget**（差异化金额）—— 脚本 `batch_set_budgets.py`
-2. **为成本中心启用单独的 AI Credit Pool** —— 脚本 `enable_ai_credit_pool.py`
+| 功能 | 脚本 | 章节 |
+|------|------|------|
+| 批量为用户设置 Budget（差异化金额） | `batch_set_budgets.py` | [2](#2-批量为用户设置-budget) |
+| 为成本中心启用单独的 AI Credit Pool | `enable_ai_credit_pool.py` | [3](#3-为成本中心启用单独的-ai-credit-pool) |
+| 为成本中心设置统一的 User-Level Budget | `set_cost_center_budgets.py` | [4](#4-为成本中心设置统一的-user-level-budget) |
+
+所有脚本的企业名称与 Token 均从 `settings.ini` 读取，配置一次即可（见[第 1 章](#1-获取企业名称和生成-token)）。
 
 ---
 
