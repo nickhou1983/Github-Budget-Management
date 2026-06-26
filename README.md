@@ -293,3 +293,107 @@ python enable_ai_credit_pool.py \
 - 脚本兼容 list 接口返回 `costCenters` / `cost_centers` / 纯数组三种结构
 - 名称匹配不区分大小写，并自动去重
 - 只能操作 `state` 为 `active` 的 Cost Center
+
+---
+
+## 4. 为成本中心设置统一的 User-Level Budget
+
+脚本：`set_cost_center_budgets.py`，按 **Cost Center 名称** 为成本中心内的**每个用户**设置统一的月度 AI Credits 预算（`budget_scope = multi_user_cost_center`）。脚本会自动把成本中心名称解析为 Cost Center ID 用于创建，并匹配已有预算决定创建或更新。
+
+### 4.1 配置 CSV 文件
+
+编辑 `cost_center_budgets.csv`，每行一个成本中心及其每用户预算金额（USD/月）：
+
+```csv
+# Cost Center Name, Monthly per-user Budget (USD)
+IT,50
+Marketing,100
+```
+
+### 4.2 列出已有成本中心预算
+
+```bash
+python set_cost_center_budgets.py --list
+```
+
+### 4.3 预览（Dry Run）
+
+```bash
+# 从 CSV
+python set_cost_center_budgets.py --config cost_center_budgets.csv --dry-run
+
+# 单个成本中心
+python set_cost_center_budgets.py --name "IT" --amount 50 --dry-run
+```
+
+### 4.4 执行
+
+```bash
+# 从 CSV 批量
+python set_cost_center_budgets.py --config cost_center_budgets.csv
+
+# 单个成本中心
+python set_cost_center_budgets.py --name "IT" --amount 50
+```
+
+### 4.5 参数
+
+| 参数 | 说明 |
+|------|------|
+| `--config` | CSV 文件路径（`成本中心名称,金额`） |
+| `--name` | 单个成本中心名称（需配合 `--amount`） |
+| `--amount` | 每用户每月预算金额（USD），用于 `--name` |
+| `--list` | 列出已有成本中心预算 |
+| `--dry-run` | 仅预览，不实际执行 |
+
+### 4.6 API 说明
+
+使用 GitHub REST API (版本 `2026-03-10`)：
+
+#### API 端点
+
+- `GET   /enterprises/{enterprise}/settings/billing/cost-centers` - 列出 Cost Center（解析名称→ID）
+- `GET   /enterprises/{enterprise}/settings/billing/budgets` - 列出现有预算
+- `POST  /enterprises/{enterprise}/settings/billing/budgets` - 创建成本中心预算
+- `PATCH /enterprises/{enterprise}/settings/billing/budgets/{budget_id}` - 更新预算金额
+
+#### 脚本逻辑
+
+1. 获取所有 Cost Center，按名称（不区分大小写）解析出 `cost_center_id`
+2. 获取所有现有预算，匹配 `budget_scope` 为 `multi_user_cost_center` / `cost_center` 且名称一致者
+3. 如已存在且金额相同，跳过；金额不同则 PATCH 更新
+4. 如不存在，POST 创建
+5. 名称未找到则记录在 Not found 中
+
+#### 创建 Budget 时传递的参数（POST）
+
+```json
+{
+  "budget_amount": 50,
+  "prevent_further_usage": true,
+  "budget_scope": "multi_user_cost_center",
+  "budget_entity_name": "COST_CENTER_ID",
+  "budget_type": "BundlePricing",
+  "budget_product_sku": "ai_credits",
+  "budget_alerting": {
+    "will_alert": false,
+    "alert_recipients": []
+  }
+}
+```
+
+| 字段 | 值 | 说明 |
+|------|------|------|
+| `budget_amount` | 动态 | 每用户每月预算金额 |
+| `prevent_further_usage` | `true` | per-user 预算强制要求 |
+| `budget_scope` | `"multi_user_cost_center"` | 成本中心级别的 user-level 预算 |
+| `budget_entity_name` | Cost Center ID | **创建时传 ID**，由名称解析得到 |
+| `budget_type` | `"BundlePricing"` | Bundle 定价类型 |
+| `budget_product_sku` | `"ai_credits"` | AI Credits 产品 |
+| `budget_alerting` | 对象 | 告警配置，默认不告警 |
+
+#### 注意事项
+
+- **创建时** `budget_entity_name` 传 Cost Center ID；但 **列出时** API 返回的同一预算 `budget_scope` 为 `cost_center`、`budget_entity_name` 为成本中心**名称**，脚本已据此匹配
+- 更新仅传 `budget_amount` 与 `prevent_further_usage`
+- 该预算作用于成本中心内的**每个用户**，与第 2 章的单用户预算不同
