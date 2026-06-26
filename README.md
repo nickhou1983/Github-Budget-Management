@@ -1,10 +1,42 @@
 # GitHub Budget Management
 
-批量为企业用户设置 User-Level Budget（差异化金额）。
+为 GitHub Enterprise 提供两类批量配置能力：
 
-## 使用方法
+1. **批量为用户设置 Budget**（差异化金额）—— 脚本 `batch_set_budgets.py`
+2. **为成本中心启用单独的 AI Credit Pool** —— 脚本 `enable_ai_credit_pool.py`
 
-### 0. 配置企业名称和 Token（推荐）
+---
+
+## 1. 获取企业名称和生成 Token
+
+### 1.1 企业名称如何获取
+
+- 企业名称可以在 GitHub Enterprise 账户设置中找到，通常是企业 URL 的一部分
+
+![alt text](Images/image-5.png)
+
+### 1.2 生成 PAT Token
+
+- 使用 `manage_billing:enterprise` scope 的 classic PAT
+
+1. 登录 GitHub，点击右上角头像 → **Settings**
+![alt text](Images/image.png)
+2. 左侧菜单滚动到底部，点击 **Developer settings**
+3. 点击 **Personal access tokens** → **Tokens (classic)**
+4. 点击 **Generate new token** → **Generate new token (classic)**
+![alt text](Images/image-1.png)
+5. 填写信息：
+   - **Note**: 填写用途描述，如 `Budget Management`
+   - **Expiration**: 选择过期时间
+   - **Scopes**: 勾选 `manage_billing:enterprise`
+![alt text](Images/image-2.png)
+![alt text](Images/image-3.png)
+**截图中的 Token 已失效，仅用于演示**
+6. 点击 **Generate token**
+7. 复制生成的 token（以 `ghp_` 开头），妥善保存，关闭页面之后无法再次查看。
+![alt text](Images/image-4.png)
+
+### 1.3 配置企业名称和 Token（推荐）
 
 复制示例配置并填入你的企业名称与 Token，避免每次都在命令行传递：
 
@@ -30,7 +62,24 @@ python enable_ai_credit_pool.py --list
 > 取值优先级：命令行参数 > 环境变量（`GITHUB_ENTERPRISE` / `GITHUB_TOKEN`）> `settings.ini`。
 > `settings.ini` 已加入 `.gitignore`，不会被提交，请勿将真实 Token 写入示例文件。
 
-### 1. 配置 CSV 文件
+### 1.4 安全建议
+
+- 不要将 token 提交到代码仓库
+- 建议通过环境变量传递 token：
+  ```bash
+  export GITHUB_TOKEN=ghp_xxx
+  python batch_set_budgets.py
+  ```
+- 定期轮换 token，设置合理的过期时间
+- 遵循最小权限原则，仅授予必要的 scope
+
+---
+
+## 2. 批量为用户设置 Budget
+
+脚本：`batch_set_budgets.py`，为企业用户批量设置 User-Level Budget（差异化金额）。
+
+### 2.1 配置 CSV 文件
 
 编辑 `config.csv`，每行一个用户及其预算金额（USD/月）：
 
@@ -43,96 +92,53 @@ team-lead,500
 intern1,50
 ```
 
-### 2. Enterprise 模式
-
-#### 预览（Dry Run）
+### 2.2 预览（Dry Run）
 
 ```bash
-python batch_set_budgets.py --enterprise YOUR_ENTERPRISE --token ghp_xxx --dry-run
+python batch_set_budgets.py --dry-run
 ```
 
-#### 执行
+### 2.3 执行
 
 ```bash
-python batch_set_budgets.py --enterprise YOUR_ENTERPRISE --token ghp_xxx --config config.csv
+python batch_set_budgets.py --config config.csv
 ```
 
-### 3. 列出所有用户预算
+### 2.4 列出所有用户预算
 
 ```bash
-python batch_set_budgets.py --enterprise YOUR_ENTERPRISE --token ghp_xxx --list
+python batch_set_budgets.py --list
 ```
 
-## 参数
+### 2.5 参数
 
 | 参数 | 说明 |
 |------|------|
-| `--enterprise` | GitHub Enterprise 名称（必填） |
+| `--enterprise` | GitHub Enterprise 名称（未配置 `settings.ini` 时必填） |
 | `--token` | GitHub PAT（需要相应的 billing 权限） |
 | `--config` | CSV 配置文件路径（默认 `config.csv`） |
 | `--list` | 列出所有现有用户预算 |
 | `--dry-run` | 仅预览，不实际执行 |
 
-## 企业名称如何获取
-
-- 企业名称可以在 GitHub Enterprise 账户设置中找到，通常是企业 URL 的一部分
-
-![alt text](Images/image-5.png)
-
-
-## Token 如何获取
-
-- 使用 `manage_billing:enterprise` scope 的 classic PAT
-
-### 创建 GitHub PAT Token
-
-
-1. 登录 GitHub，点击右上角头像 → **Settings**
-![alt text](Images/image.png)
-2. 左侧菜单滚动到底部，点击 **Developer settings**
-
-3. 点击 **Personal access tokens** → **Tokens (classic)**
-4. 点击 **Generate new token** → **Generate new token (classic)**
-![alt text](Images/image-1.png)
-5. 填写信息：
-   - **Note**: 填写用途描述，如 `Budget Management`
-   - **Expiration**: 选择过期时间
-   - **Scopes**: 勾选 `manage_billing:enterprise`
-![alt text](Images/image-2.png)
-![alt text](Images/image-3.png)
-**截图中的Token已失效，仅用于演示**
-6. 点击 **Generate token**
-7. 复制生成的 token（以 `ghp_` 开头），妥善保存，关闭页面之后无法再次查看。
-![alt text](Images/image-4.png)
-
-### 安全建议
-
-- 不要将 token 提交到代码仓库
-- 建议通过环境变量传递 token：
-  ```bash
-  export GITHUB_TOKEN=ghp_xxx
-  python batch_set_budgets.py --enterprise YOUR_ENTERPRISE --token $GITHUB_TOKEN
-  ```
-- 定期轮换 token，设置合理的过期时间
-- 遵循最小权限原则，仅授予必要的 scope
-
-## API 说明
+### 2.6 API 说明
 
 使用 GitHub REST API (版本 `2026-03-10`)：
 
-### API 端点
+#### API 端点
+
 - `GET /enterprises/{enterprise}/settings/billing/budgets` - 列出现有预算
 - `POST /enterprises/{enterprise}/settings/billing/budgets` - 创建预算
 - `PATCH /enterprises/{enterprise}/settings/billing/budgets/{budget_id}` - 更新预算
 
-### 脚本逻辑
+#### 脚本逻辑
+
 1. 获取所有现有 user scope 预算（自动分页）
 2. 对每个用户，检查是否已有预算
 3. 如已存在且金额相同，跳过
 4. 如已存在但金额不同，更新
 5. 如不存在，创建新预算
 
-### 创建 Budget 时传递的参数（POST）
+#### 创建 Budget 时传递的参数（POST）
 
 ```json
 {
@@ -162,7 +168,7 @@ python batch_set_budgets.py --enterprise YOUR_ENTERPRISE --token ghp_xxx --list
 | `budget_alerting.alert_recipients` | `[用户名]` | 告警接收人 |
 | `user` | 用户名 | 目标用户 |
 
-### 更新 Budget 时传递的参数（PATCH）
+#### 更新 Budget 时传递的参数（PATCH）
 
 ```json
 {
@@ -178,42 +184,39 @@ python batch_set_budgets.py --enterprise YOUR_ENTERPRISE --token ghp_xxx --list
 
 > **注意**: 更新时不可传递 `budget_scope`、`budget_entity_name` 等字段，这些字段创建后不可变。
 
-### 注意事项
+#### 注意事项
+
 - User scope 预算的 `prevent_further_usage` 必须为 `true`（API 强制要求）
 - API 每页返回最多 10 条预算，脚本自动处理分页
 
 ---
 
-## Cost Center AI Credit Pool
+## 3. 为成本中心启用单独的 AI Credit Pool
 
-根据 **Cost Center 名称** 批量启用（或关闭）AI Credit Pool。启用后，该 Cost Center 仅可使用由归属到它的 License 所提供的 AI Credits。额度由系统自动计算：
+脚本：`enable_ai_credit_pool.py`，根据 **Cost Center 名称** 批量启用（或关闭）AI Credit Pool。启用后，该 Cost Center 仅可使用由归属到它的 License 所提供的 AI Credits。额度由系统自动计算：
 
-- Copilot Business：每个 License 每月 3,000 AI Credits
-- Copilot Enterprise：每个 License 每月 7,000 AI Credits
+- Copilot Business：每个 License 每月 1,900 AI Credits
+- Copilot Enterprise：每个 License 每月 3,900 AI Credits
 
 > 该控制项没有自定义额度，只能开启或关闭。
 
-对应脚本：`enable_ai_credit_pool.py`
-
-## 使用方法
-
-### 1. 列出所有 Cost Center 及 AI Pool 状态
+### 3.1 列出所有 Cost Center 及 AI Pool 状态
 
 ```bash
-python enable_ai_credit_pool.py --enterprise YOUR_ENTERPRISE --token ghp_xxx --list
+python enable_ai_credit_pool.py --list
 ```
 
 建议先执行 `--list`，确认 Cost Center 名称与当前状态。
 
-### 2. 按名称启用
+### 3.2 按名称启用
 
 ```bash
 # 启用一个或多个（--name 可重复）
-python enable_ai_credit_pool.py --enterprise YOUR_ENTERPRISE --token ghp_xxx \
+python enable_ai_credit_pool.py \
     --name "Cost Center A" --name "Cost Center B"
 ```
 
-### 3. 从 CSV 批量启用
+### 3.3 从 CSV 批量启用
 
 编辑 `cost_centers.csv`，每行一个 Cost Center 名称：
 
@@ -224,28 +227,28 @@ Cost Center B
 ```
 
 ```bash
-python enable_ai_credit_pool.py --enterprise YOUR_ENTERPRISE --token ghp_xxx --config cost_centers.csv
+python enable_ai_credit_pool.py --config cost_centers.csv
 ```
 
-### 4. 预览（Dry Run）
+### 3.4 预览（Dry Run）
 
 ```bash
-python enable_ai_credit_pool.py --enterprise YOUR_ENTERPRISE --token ghp_xxx \
+python enable_ai_credit_pool.py \
     --name "Cost Center A" --dry-run
 ```
 
-### 5. 关闭 AI Credit Pool
+### 3.5 关闭 AI Credit Pool
 
 ```bash
-python enable_ai_credit_pool.py --enterprise YOUR_ENTERPRISE --token ghp_xxx \
+python enable_ai_credit_pool.py \
     --name "Cost Center A" --disable
 ```
 
-## 参数
+### 3.6 参数
 
 | 参数 | 说明 |
 |------|------|
-| `--enterprise` | GitHub Enterprise 名称（必填） |
+| `--enterprise` | GitHub Enterprise 名称（未配置 `settings.ini` 时必填） |
 | `--token` | GitHub PAT（需要 `manage_billing:enterprise` 权限） |
 | `--name` | Cost Center 名称，可重复指定多个 |
 | `--config` | CSV 文件路径，每行一个 Cost Center 名称 |
@@ -253,32 +256,40 @@ python enable_ai_credit_pool.py --enterprise YOUR_ENTERPRISE --token ghp_xxx \
 | `--disable` | 关闭而非启用 AI Credit Pool |
 | `--dry-run` | 仅预览，不实际执行 |
 
-## API 说明
+### 3.7 API 说明
 
 使用 GitHub REST API (版本 `2026-03-10`)：
 
-### API 端点
+#### API 端点
+
 - `GET   /enterprises/{enterprise}/settings/billing/cost-centers` - 列出 Cost Center
 - `PATCH /enterprises/{enterprise}/settings/billing/cost-centers/{cost_center_id}` - 启用/关闭 AI Credit Pool
 
-### 脚本逻辑
+#### 脚本逻辑
+
 1. 获取所有 Cost Center（自动分页）
 2. 按名称匹配（不区分大小写）找到对应的 `cost_center_id`
 3. 如当前状态已符合，跳过；否则 PATCH 更新
 4. 名称未找到则记录在 Not found 中
 
-### 启用时传递的参数（PATCH）
+#### 启用时传递的参数（PATCH）
 
 ```json
 {
+  "name": "IT",
   "ai_credit_pool_enabled": true
 }
 ```
 
 | 字段 | 值 | 说明 |
 |------|------|------|
+| `name` | Cost Center 名称 | **必填**，该端点同时用于「更新成本中心名称」，缺失会返回 422 |
 | `ai_credit_pool_enabled` | `true` / `false` | 是否启用该 Cost Center 的 AI Credit Pool |
 
-### 注意事项
+#### 注意事项
+
+- 该 PATCH 端点要求 `name` 字段为必填，脚本会自动使用 API 返回的真实名称
+- 响应不会回显 `ai_credit_pool_enabled`，建议到企业账单设置页面再确认开关状态
 - 脚本兼容 list 接口返回 `costCenters` / `cost_centers` / 纯数组三种结构
 - 名称匹配不区分大小写，并自动去重
+- 只能操作 `state` 为 `active` 的 Cost Center
