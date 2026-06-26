@@ -1,0 +1,7 @@
+[github]
+# GitHub Enterprise 名称（slug），通常是企业 URL 的一部分
+enterprise = YOUR_ENTERPRISE
+
+# GitHub Personal Access Token（classic，需 manage_billing:enterprise scope）
+# 以 ghp_ 开头。请勿提交真实 token 到代码仓库。
+token = ghp_xxx

@@ -4,6 +4,32 @@
 
 ## 使用方法
 
+### 0. 配置企业名称和 Token（推荐）
+
+复制示例配置并填入你的企业名称与 Token，避免每次都在命令行传递：
+
+```bash
+cp settings.ini.example settings.ini
+```
+
+编辑 `settings.ini`：
+
+```ini
+[github]
+enterprise = YOUR_ENTERPRISE
+token = ghp_xxx
+```
+
+配置后即可省略 `--enterprise` 与 `--token`：
+
+```bash
+python batch_set_budgets.py --list
+python enable_ai_credit_pool.py --list
+```
+
+> 取值优先级：命令行参数 > 环境变量（`GITHUB_ENTERPRISE` / `GITHUB_TOKEN`）> `settings.ini`。
+> `settings.ini` 已加入 `.gitignore`，不会被提交，请勿将真实 Token 写入示例文件。
+
 ### 1. 配置 CSV 文件
 
 编辑 `config.csv`，每行一个用户及其预算金额（USD/月）：
@@ -155,3 +181,104 @@ python batch_set_budgets.py --enterprise YOUR_ENTERPRISE --token ghp_xxx --list
 ### 注意事项
 - User scope 预算的 `prevent_further_usage` 必须为 `true`（API 强制要求）
 - API 每页返回最多 10 条预算，脚本自动处理分页
+
+---
+
+## Cost Center AI Credit Pool
+
+根据 **Cost Center 名称** 批量启用（或关闭）AI Credit Pool。启用后，该 Cost Center 仅可使用由归属到它的 License 所提供的 AI Credits。额度由系统自动计算：
+
+- Copilot Business：每个 License 每月 3,000 AI Credits
+- Copilot Enterprise：每个 License 每月 7,000 AI Credits
+
+> 该控制项没有自定义额度，只能开启或关闭。
+
+对应脚本：`enable_ai_credit_pool.py`
+
+## 使用方法
+
+### 1. 列出所有 Cost Center 及 AI Pool 状态
+
+```bash
+python enable_ai_credit_pool.py --enterprise YOUR_ENTERPRISE --token ghp_xxx --list
+```
+
+建议先执行 `--list`，确认 Cost Center 名称与当前状态。
+
+### 2. 按名称启用
+
+```bash
+# 启用一个或多个（--name 可重复）
+python enable_ai_credit_pool.py --enterprise YOUR_ENTERPRISE --token ghp_xxx \
+    --name "Cost Center A" --name "Cost Center B"
+```
+
+### 3. 从 CSV 批量启用
+
+编辑 `cost_centers.csv`，每行一个 Cost Center 名称：
+
+```csv
+# Cost Center Name (one per line)
+Cost Center A
+Cost Center B
+```
+
+```bash
+python enable_ai_credit_pool.py --enterprise YOUR_ENTERPRISE --token ghp_xxx --config cost_centers.csv
+```
+
+### 4. 预览（Dry Run）
+
+```bash
+python enable_ai_credit_pool.py --enterprise YOUR_ENTERPRISE --token ghp_xxx \
+    --name "Cost Center A" --dry-run
+```
+
+### 5. 关闭 AI Credit Pool
+
+```bash
+python enable_ai_credit_pool.py --enterprise YOUR_ENTERPRISE --token ghp_xxx \
+    --name "Cost Center A" --disable
+```
+
+## 参数
+
+| 参数 | 说明 |
+|------|------|
+| `--enterprise` | GitHub Enterprise 名称（必填） |
+| `--token` | GitHub PAT（需要 `manage_billing:enterprise` 权限） |
+| `--name` | Cost Center 名称，可重复指定多个 |
+| `--config` | CSV 文件路径，每行一个 Cost Center 名称 |
+| `--list` | 列出所有 Cost Center 及 AI Pool 状态 |
+| `--disable` | 关闭而非启用 AI Credit Pool |
+| `--dry-run` | 仅预览，不实际执行 |
+
+## API 说明
+
+使用 GitHub REST API (版本 `2026-03-10`)：
+
+### API 端点
+- `GET   /enterprises/{enterprise}/settings/billing/cost-centers` - 列出 Cost Center
+- `PATCH /enterprises/{enterprise}/settings/billing/cost-centers/{cost_center_id}` - 启用/关闭 AI Credit Pool
+
+### 脚本逻辑
+1. 获取所有 Cost Center（自动分页）
+2. 按名称匹配（不区分大小写）找到对应的 `cost_center_id`
+3. 如当前状态已符合，跳过；否则 PATCH 更新
+4. 名称未找到则记录在 Not found 中
+
+### 启用时传递的参数（PATCH）
+
+```json
+{
+  "ai_credit_pool_enabled": true
+}
+```
+
+| 字段 | 值 | 说明 |
+|------|------|------|
+| `ai_credit_pool_enabled` | `true` / `false` | 是否启用该 Cost Center 的 AI Credit Pool |
+
+### 注意事项
+- 脚本兼容 list 接口返回 `costCenters` / `cost_centers` / 纯数组三种结构
+- 名称匹配不区分大小写，并自动去重

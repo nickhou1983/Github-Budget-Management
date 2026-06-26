@@ -39,6 +39,8 @@ from pathlib import Path
 
 import requests
 
+from settings import resolve_credentials
+
 API_BASE = "https://api.github.com"
 API_VERSION = "2026-03-10"
 
@@ -319,22 +321,37 @@ def main():
     )
 
     # Mutually exclusive: org or enterprise
-    target_group = parser.add_mutually_exclusive_group(required=True)
+    target_group = parser.add_mutually_exclusive_group(required=False)
     target_group.add_argument("--org", help="GitHub organization name")
-    target_group.add_argument("--enterprise", help="GitHub Enterprise name")
+    target_group.add_argument("--enterprise", help="GitHub Enterprise name (falls back to settings.ini / GITHUB_ENTERPRISE)")
 
-    parser.add_argument("--token", required=True, help="GitHub Personal Access Token (with billing scope)")
+    parser.add_argument("--token", help="GitHub Personal Access Token (falls back to settings.ini / GITHUB_TOKEN)")
     parser.add_argument("--config", default="config.csv", help="Path to CSV config file (default: config.csv)")
     parser.add_argument("--list", action="store_true", help="List all existing user budgets")
     parser.add_argument("--dry-run", action="store_true", help="Preview changes without applying them")
 
     args = parser.parse_args()
 
+    # Resolve credentials: token always from args/env/settings; enterprise may
+    # also come from settings.ini when neither --org nor --enterprise is given.
+    resolved_enterprise, token = resolve_credentials(args.enterprise, args.token)
+    enterprise = args.enterprise
+    org = args.org
+    if not org and not enterprise:
+        enterprise = resolved_enterprise
+
+    if not org and not enterprise:
+        print("Error: Target is required. Provide --org or --enterprise, set GITHUB_ENTERPRISE, or configure settings.ini.")
+        sys.exit(1)
+    if not token:
+        print("Error: Token is required. Provide --token, set GITHUB_TOKEN, or configure settings.ini.")
+        sys.exit(1)
+
     if args.list:
         list_user_budgets(
-            token=args.token,
-            org=args.org,
-            enterprise=args.enterprise,
+            token=token,
+            org=org,
+            enterprise=enterprise,
         )
         return
 
@@ -348,10 +365,10 @@ def main():
         print(f"  {c.username}: ${c.amount}")
 
     batch_set_budgets(
-        token=args.token,
+        token=token,
         configs=configs,
-        org=args.org,
-        enterprise=args.enterprise,
+        org=org,
+        enterprise=enterprise,
         dry_run=args.dry_run,
     )
 
