@@ -77,7 +77,7 @@ python batch_set_budgets.py --enterprise YOUR_ENTERPRISE --token ghp_xxx --list
 
 - 企业名称可以在 GitHub Enterprise 账户设置中找到，通常是企业 URL 的一部分
 
-![alt text](image.png)
+![alt text](Images/image-5.png)
 
 
 ## Token 如何获取
