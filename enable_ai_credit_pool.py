@@ -104,7 +104,8 @@ def list_cost_centers(token: str, enterprise: str) -> list[dict]:
                 batch = data
             else:
                 batch = data.get("costCenters") or data.get("cost_centers") or []
-            all_cost_centers.extend(batch)
+            active = [cc for cc in batch if cc.get("state") == "active"]
+            all_cost_centers.extend(active)
             # Stop when fewer than a full page is returned (no explicit pagination flag).
             if len(batch) < 100:
                 break
@@ -144,7 +145,10 @@ def set_ai_credit_pool(
     base_url = build_cost_centers_url(enterprise)
     url = f"{base_url}/{cost_center_id}"
     headers = get_headers(token)
-    payload = {"name": name, "ai_credit_pool_enabled": enabled}
+    payload = {
+        # "name": name,
+        "ai_credit_pool_enabled": enabled,
+    }
     resp = requests.patch(url, headers=headers, json=payload)
     return {"status": resp.status_code, "body": resp.json() if resp.content else {}}
 

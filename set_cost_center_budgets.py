@@ -115,7 +115,8 @@ def list_cost_centers(token: str, enterprise: str) -> list[dict]:
                 batch = data
             else:
                 batch = data.get("costCenters") or data.get("cost_centers") or []
-            all_cost_centers.extend(batch)
+            active = [cc for cc in batch if cc.get("state") == "active"]
+            all_cost_centers.extend(active)
             if len(batch) < 100:
                 break
             page += 1
@@ -213,6 +214,10 @@ def update_cost_center_budget(
     payload = {
         "budget_amount": amount,
         "prevent_further_usage": True,
+        "budget_alerting": {
+            "will_alert": False,
+            "alert_recipients": [],
+        },
     }
     resp = requests.patch(url, headers=headers, json=payload)
     return {"status": resp.status_code, "body": resp.json() if resp.content else {}}
@@ -234,14 +239,16 @@ def list_cost_center_budgets(token: str, enterprise: str):
         return
 
     print(f"Found {len(cc_budgets)} cost-center budget(s):\n")
-    print(f"  {'Cost Center':<30} {'Amount':>10} {'Budget ID'}")
-    print(f"  {'-'*30} {'-'*10} {'-'*36}")
+    print(f"  {'Budget Name':<30} {'Cost Center':<30} {'Amount':>10} {'Scope':<28} {'Budget ID'}")
+    print(f"  {'-'*30} {'-'*30} {'-'*10} {'-'*28} {'-'*36}")
 
     for budget in sorted(cc_budgets, key=lambda b: b.get("budget_entity_name", "")):
-        name = budget.get("budget_entity_name", "N/A")
+        budget_name = budget.get("name", "N/A")
+        entity_name = budget.get("budget_entity_name", "N/A")
         amount = budget.get("budget_amount", 0)
+        scope = budget.get("budget_scope", "N/A")
         budget_id = budget.get("id", "N/A")
-        print(f"  {name:<30} ${amount:>9} {budget_id}")
+        print(f"  {budget_name:<30} {entity_name:<30} ${amount:>9} {scope:<28} {budget_id}")
 
 
 def batch_set_cost_center_budgets(
@@ -249,6 +256,7 @@ def batch_set_cost_center_budgets(
     enterprise: str,
     configs: list[CostCenterBudget],
     dry_run: bool = False,
+    create_only: bool = False,
 ):
     """Batch create/update cost-center user-level budgets."""
     print(f"\n{'='*64}")
@@ -256,15 +264,21 @@ def batch_set_cost_center_budgets(
     print(f"  Enterprise: {enterprise}")
     print(f"  Cost centers to configure: {len(configs)}")
     print(f"  Mode: {'DRY RUN' if dry_run else 'LIVE'}")
+    if create_only:
+        print(f"  Create only: YES (POST only, skip updates)")
     print(f"{'='*64}\n")
 
     print("Fetching cost centers...")
     cost_centers = list_cost_centers(token, enterprise)
     print(f"Found {len(cost_centers)} cost center(s).")
 
-    print("Fetching existing budgets...")
-    existing_budgets = list_existing_budgets(token, enterprise)
-    print(f"Found {len(existing_budgets)} existing budget(s).\n")
+    if not create_only:
+        print("Fetching existing budgets...")
+        existing_budgets = list_existing_budgets(token, enterprise)
+        print(f"Found {len(existing_budgets)} existing budget(s).\n")
+    else:
+        existing_budgets = []
+        print()
 
     results = {"created": [], "updated": [], "skipped": [], "not_found": [], "failed": []}
 
@@ -349,6 +363,7 @@ def main():
     parser.add_argument("--config", help="Path to CSV config file (cost_center_name,amount)")
     parser.add_argument("--name", help="Cost center name for a one-off budget")
     parser.add_argument("--amount", type=int, help="Monthly per-user budget amount (USD) for --name")
+    parser.add_argument("--create", action="store_true", help="Force create budgets using POST (skip update logic)")
     parser.add_argument("--list", action="store_true", help="List all existing cost-center budgets")
     parser.add_argument("--dry-run", action="store_true", help="Preview changes without applying them")
 
@@ -388,6 +403,7 @@ def main():
         enterprise=enterprise,
         configs=configs,
         dry_run=args.dry_run,
+        create_only=args.create,
     )
 
 
