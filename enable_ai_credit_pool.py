@@ -120,6 +120,35 @@ def list_cost_centers(token: str, enterprise: str) -> list[dict]:
     return all_cost_centers
 
 
+def dump_raw_cost_centers(token: str, enterprise: str):
+    """Fetch and print the raw JSON response(s) from the cost-centers API.
+
+    Unlike list_cost_centers(), this does no filtering or field extraction so you
+    can inspect exactly what the GitHub API returns (all fields, all states).
+    """
+    base_url = build_cost_centers_url(enterprise)
+    headers = get_headers(token)
+    page = 1
+
+    while True:
+        resp = requests.get(base_url, headers=headers, params={"page": page, "per_page": 100})
+        print(f"# ---- GET {base_url}?page={page}&per_page=100 -> HTTP {resp.status_code} ----")
+        try:
+            body = resp.json()
+            print(json.dumps(body, indent=2, ensure_ascii=False))
+        except ValueError:
+            print(resp.text)
+            break
+
+        if resp.status_code != 200:
+            break
+
+        batch = body if isinstance(body, list) else (body.get("costCenters") or body.get("cost_centers") or [])
+        if len(batch) < 100:
+            break
+        page += 1
+
+
 def find_cost_center_by_name(cost_centers: list[dict], name: str) -> dict | None:
     """Find a cost center by its name (case-insensitive)."""
     target = name.strip().lower()
@@ -153,6 +182,33 @@ def set_ai_credit_pool(
     return {"status": resp.status_code, "body": resp.json() if resp.content else {}}
 
 
+def get_pool_amounts(cc: dict) -> tuple:
+    """Return (target_amount, current_amount) for a cost center's AI credit pool.
+
+    The API nests these under an 'ai_credit_pool_state' object; fall back to the
+    top level in case the shape changes.
+    """
+    pool = cc.get("ai_credit_pool_state")
+    if not isinstance(pool, dict):
+        pool = {}
+    target = pool.get("target_amount", cc.get("target_amount"))
+    current = pool.get("current_amount", cc.get("current_amount"))
+    return target, current
+
+
+def format_amount(value) -> str:
+    """Format an amount for display; show '-' when the value is missing."""
+    if value is None:
+        return "-"
+    if isinstance(value, bool):
+        return str(value)
+    if isinstance(value, int):
+        return f"{value:,}"
+    if isinstance(value, float):
+        return f"{value:,.2f}"
+    return str(value)
+
+
 def display_cost_centers(token: str, enterprise: str):
     """List all cost centers and display their AI credit pool status."""
     print(f"\n{'='*72}")
@@ -168,15 +224,16 @@ def display_cost_centers(token: str, enterprise: str):
         return
 
     print(f"Found {len(cost_centers)} cost center(s):\n")
-    print(f"  {'Name':<36} {'AI Pool':<8} {'Cost Center ID'}")
-    print(f"  {'-'*36} {'-'*8} {'-'*24}")
+    print(f"  {'Name':<36} {'AI Pool':<8} {'Target':>14} {'Current':>14} {'Cost Center ID'}")
+    print(f"  {'-'*36} {'-'*8} {'-'*14} {'-'*14} {'-'*24}")
 
     for cc in sorted(cost_centers, key=lambda c: (c.get("name") or "")):
         name = cc.get("name", "N/A")
         cc_id = cc.get("id", "N/A")
         enabled = cc.get("ai_credit_pool_enabled")
         status = "ON" if enabled else ("OFF" if enabled is not None else "?")
-        print(f"  {name:<36} {status:<8} {cc_id}")
+        target, current = get_pool_amounts(cc)
+        print(f"  {name:<36} {status:<8} {format_amount(target):>14} {format_amount(current):>14} {cc_id}")
 
     print(f"\n  Total cost centers: {len(cost_centers)}")
 
@@ -271,6 +328,7 @@ def main():
     )
     parser.add_argument("--config", help="Path to CSV file with cost center names (one per line)")
     parser.add_argument("--list", action="store_true", help="List all cost centers and their AI pool status")
+    parser.add_argument("--raw", action="store_true", help="Print the raw JSON response(s) from the cost-centers API")
     parser.add_argument("--disable", action="store_true", help="Disable instead of enable the AI credit pool")
     parser.add_argument("--dry-run", action="store_true", help="Preview changes without applying them")
 
@@ -283,6 +341,10 @@ def main():
     if not token:
         print("Error: Token is required. Provide --token, set GITHUB_TOKEN, or configure settings.ini.")
         sys.exit(1)
+
+    if args.raw:
+        dump_raw_cost_centers(token=token, enterprise=enterprise)
+        return
 
     if args.list:
         display_cost_centers(token=token, enterprise=enterprise)

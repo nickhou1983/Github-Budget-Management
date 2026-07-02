@@ -217,7 +217,19 @@ python batch_set_budgets.py --list
 python enable_ai_credit_pool.py --list
 ```
 
-建议先执行 `--list`，确认 Cost Center 名称与当前状态。
+建议先执行 `--list`，确认 Cost Center 名称与当前状态。输出除 AI Pool 开关外，还包含 AI Credit Pool 的 `Target`（目标额度 `target_amount`）与 `Current`（当前额度 `current_amount`）：
+
+```
+  Name                                  AI Pool          Target        Current  Cost Center ID
+  ------------------------------------ -------- -------------- -------------- ------------------------
+  External                             ON               100.00           0.00  4c7c5f46-d72a-4b10-8295-0de6029353a2
+```
+
+如需查看接口返回的完整原始 JSON（不做任何过滤，包含所有字段与状态），使用 `--raw`：
+
+```bash
+python enable_ai_credit_pool.py --raw
+```
 
 ### 3.2 按名称启用
 
@@ -263,7 +275,8 @@ python enable_ai_credit_pool.py \
 | `--token` | GitHub PAT（需要 `manage_billing:enterprise` 权限） |
 | `--name` | Cost Center 名称，可重复指定多个 |
 | `--config` | CSV 文件路径，每行一个 Cost Center 名称 |
-| `--list` | 列出所有 Cost Center 及 AI Pool 状态 |
+| `--list` | 列出所有 Cost Center 及 AI Pool 状态（含 Target / Current 额度） |
+| `--raw` | 打印 Cost Center 接口返回的原始 JSON（用于排查字段） |
 | `--disable` | 关闭而非启用 AI Credit Pool |
 | `--dry-run` | 仅预览，不实际执行 |
 
@@ -300,7 +313,7 @@ python enable_ai_credit_pool.py \
 #### 注意事项
 
 - 该 PATCH 端点要求 `name` 字段为必填，脚本会自动使用 API 返回的真实名称
-- 响应不会回显 `ai_credit_pool_enabled`，建议到企业账单设置页面再确认开关状态
+- list（GET）接口会返回 `ai_credit_pool_enabled` 及 `ai_credit_pool_state`（含 `target_amount` / `current_amount`），`--list` 会展示为 AI Pool、Target、Current 列
 - 脚本兼容 list 接口返回 `costCenters` / `cost_centers` / 纯数组三种结构
 - 名称匹配不区分大小写，并自动去重
 - 只能操作 `state` 为 `active` 的 Cost Center
