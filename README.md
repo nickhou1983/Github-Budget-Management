@@ -219,7 +219,7 @@ python enable_ai_credit_pool.py --list
 
 建议先执行 `--list`，确认 Cost Center 名称与当前状态。输出除 AI Pool 开关外，还包含 AI Credit Pool 的 `Target`（目标额度 `target_amount`）与 `Current`（当前额度 `current_amount`）：
 
-```
+```text
   Name                                  AI Pool          Target        Current  Cost Center ID
   ------------------------------------ -------- -------------- -------------- ------------------------
   External                             ON               100.00           0.00  4c7c5f46-d72a-4b10-8295-0de6029353a2
