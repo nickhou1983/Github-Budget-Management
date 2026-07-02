@@ -146,7 +146,7 @@ def set_ai_credit_pool(
     url = f"{base_url}/{cost_center_id}"
     headers = get_headers(token)
     payload = {
-        # "name": name,
+        "name": name,
         "ai_credit_pool_enabled": enabled,
     }
     resp = requests.patch(url, headers=headers, json=payload)
