@@ -35,6 +35,17 @@ flowchart TD
   O --> P
 ```
 
+上图描述了一次 Copilot 请求从发起到计费的完整判定流程：
+
+1. **用户发起 Copilot 请求**：任意一次 Copilot 调用都会触发下面的额度与计费判定。
+2. **确定生效的 User-Level Budget（ULB）**：按优先级从高到低选取一个生效的 ULB —— **用户个人 ULB > 成本中心 ULB > 企业通用 ULB**，命中即停，只有最高优先级的那个 ULB 生效。
+3. **检查 ULB 是否超限**：如果已达到该 ULB 上限，则**请求直接失败**；否则进入 AI Credits Pool 检查。
+4. **确定 AI Credits Pool 来源**：如果用户属于某个成本中心，检查**该成本中心的 Credits Pool**；否则检查**企业级 Enterprise Credits Pool**。
+5. **优先消耗 Credits Pool**：如果对应 Credits Pool 仍有余额，则**优先扣减 Credits Pool**，请求成功。
+6. **回退到 Budget**：如果 Credits Pool 已耗尽，则回退检查当前生效的 Budget —— 有可用额度则**扣减 Budget** 并成功；**若 Budget 也已用完，则请求失败**。
+
+简单来说：**ULB 决定“能不能用”，Credits Pool 与 Budget 决定“从哪扣费”**—— 优先消耗 Credits Pool，用完再走 Budget，两者都没有额度时请求失败。
+
 为 GitHub Enterprise 提供批量预算与成本中心配置能力：
 
 | 功能 | 脚本 | 章节 |
