@@ -135,6 +135,36 @@ def find_user_budget(budgets: list[dict], username: str) -> dict | None:
     return None
 
 
+def get_user_consumed(
+    token: str,
+    username: str,
+    org: str | None = None,
+    enterprise: str | None = None,
+) -> dict | None:
+    """Fetch the consumed (used) amount for a single user's budget.
+
+    Calls the budgets endpoint with the `user` filter, which returns a
+    top-level `effective_budget` object containing `budget_amount` and
+    `consumed_amount` (month-to-date usage in USD) for that user.
+
+    Returns the `effective_budget` dict, or None when unavailable.
+    """
+    base_url = build_budgets_url(org=org, enterprise=enterprise)
+    headers = get_headers(token)
+    resp = requests.get(
+        base_url,
+        headers=headers,
+        params={"scope": "user", "user": username, "per_page": 10},
+    )
+    if resp.status_code != 200:
+        return None
+    data = resp.json()
+    effective = data.get("effective_budget")
+    if not isinstance(effective, dict):
+        return None
+    return effective
+
+
 def create_user_budget(
     token: str,
     username: str,
@@ -215,6 +245,76 @@ def list_user_budgets(
 
     total = sum(b.get("budget_amount", 0) for b in budgets)
     print(f"\n  {'Total':<30} ${total:>9}")
+    print(f"  {'Users':<30} {len(budgets):>10}")
+
+
+def report_budget_usage(
+    token: str,
+    org: str | None = None,
+    enterprise: str | None = None,
+):
+    """Report the consumed (used) amount for each user-level budget.
+
+    Enumerates all user budgets, then queries each user's month-to-date
+    consumed amount and prints budget / used / remaining / used%.
+    """
+    entity_name = enterprise or org
+    entity_type = "Enterprise" if enterprise else "Organization"
+
+    print(f"\n{'='*78}")
+    print(f"  User-Level Budget Usage")
+    print(f"  {entity_type}: {entity_name}")
+    print(f"{'='*78}\n")
+
+    print("Fetching user budgets...")
+    budgets = list_existing_budgets(token, org=org, enterprise=enterprise)
+
+    if not budgets:
+        print("No user budgets found.")
+        return
+
+    budgets = sorted(budgets, key=lambda b: b.get("budget_entity_name", ""))
+    print(f"Found {len(budgets)} user budget(s). Querying usage per user...\n")
+
+    print(f"  {'Username':<30} {'Budget':>10} {'Used':>12} {'Remaining':>12} {'Used%':>8}")
+    print(f"  {'-'*30} {'-'*10} {'-'*12} {'-'*12} {'-'*8}")
+
+    total_budget = 0
+    total_used = 0.0
+
+    for i, budget in enumerate(budgets, 1):
+        username = budget.get("budget_entity_name", "N/A")
+        limit = int(budget.get("budget_amount", 0) or 0)
+
+        effective = get_user_consumed(token, username, org=org, enterprise=enterprise)
+        if effective is not None:
+            limit = int(effective.get("budget_amount", limit) or limit)
+            used = float(effective.get("consumed_amount", 0) or 0)
+            remaining = limit - used
+            pct = (used / limit * 100) if limit else 0.0
+            print(
+                f"  {username:<30} ${limit:>9,} ${used:>11,.2f} "
+                f"${remaining:>11,.2f} {pct:>7.1f}%"
+            )
+            total_used += used
+        else:
+            print(
+                f"  {username:<30} ${limit:>9,} {'N/A':>12} {'N/A':>12} {'N/A':>8}"
+            )
+
+        total_budget += limit
+
+        # Rate limiting: one request per user, respect GitHub API limits.
+        if i < len(budgets):
+            time.sleep(1)
+
+    total_remaining = total_budget - total_used
+    total_pct = (total_used / total_budget * 100) if total_budget else 0.0
+    print(f"  {'-'*30} {'-'*10} {'-'*12} {'-'*12} {'-'*8}")
+    print(
+        f"  {'Total':<30} ${total_budget:>9,} ${total_used:>11,.2f} "
+        f"${total_remaining:>11,.2f} {total_pct:>7.1f}%"
+    )
     print(f"  {'Users':<30} {len(budgets):>10}")
 
 
@@ -328,6 +428,7 @@ def main():
     parser.add_argument("--token", help="GitHub Personal Access Token (falls back to settings.ini / GITHUB_TOKEN)")
     parser.add_argument("--config", default="config.csv", help="Path to CSV config file (default: config.csv)")
     parser.add_argument("--list", action="store_true", help="List all existing user budgets")
+    parser.add_argument("--usage", action="store_true", help="Report consumed (used) amount for each user budget")
     parser.add_argument("--dry-run", action="store_true", help="Preview changes without applying them")
 
     args = parser.parse_args()
@@ -349,6 +450,14 @@ def main():
 
     if args.list:
         list_user_budgets(
+            token=token,
+            org=org,
+            enterprise=enterprise,
+        )
+        return
+
+    if args.usage:
+        report_budget_usage(
             token=token,
             org=org,
             enterprise=enterprise,

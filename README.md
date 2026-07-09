@@ -1,5 +1,40 @@
 # GitHub Budget Management
 
+```mermaid
+flowchart TD
+  A[用户发起 Copilot 请求] --> B[确定生效的 ULB 优先级]
+
+  B --> B1{存在用户个人 ULB?}
+  B1 -->|是| C[使用个人 ULB]
+  B1 -->|否| B2{存在成本中心 ULB?}
+  B2 -->|是| D[使用成本中心 ULB]
+  B2 -->|否| E[使用企业通用 ULB]
+
+  C --> F{是否达到该 ULB 上限?}
+  D --> F
+  E --> F
+
+  F -->|是| X[请求失败]
+  F -->|否| G[检查 AI Credits Pool]
+
+  G --> H{用户是否属于成本中心?}
+  H -->|是| I[检查成本中心 Credits Pool]
+  H -->|否| J[检查 Enterprise Credits Pool]
+
+  I --> K{Credits Pool 是否还有余额?}
+  J --> K
+
+  K -->|有| L[消耗 Credits Pool]
+  K -->|没有| M[回退检查当前生效的 Budget]
+
+  M --> N{Budget 是否还有可用额度?}
+  N -->|有| O[消耗 Budget]
+  N -->|没有| X
+
+  L --> P[请求成功]
+  O --> P
+```
+
 为 GitHub Enterprise 提供批量预算与成本中心配置能力：
 
 | 功能 | 脚本 | 章节 |
@@ -115,7 +150,29 @@ python batch_set_budgets.py --config config.csv
 python batch_set_budgets.py --list
 ```
 
-### 2.5 参数
+### 2.5 统计每个用户预算的已使用量
+
+按用户逐个查询本月已消耗金额（`consumed_amount`），输出预算、已用、剩余与使用率：
+
+```bash
+python batch_set_budgets.py --usage
+```
+
+示例输出（数值为示意）：
+
+```text
+  Username                           Budget         Used    Remaining    Used%
+  ------------------------------ ---------- ------------ ------------ --------
+  developer1                     $      200 $      45.30 $     154.70    22.7%
+  octocat                        $      100 $      98.10 $       1.90    98.1%
+  ------------------------------ ---------- ------------ ------------ --------
+  Total                          $      300 $     143.40 $     156.60    47.8%
+  Users                                   2
+```
+
+> 已使用量来自 budgets 端点在传入 `?scope=user&user={login}` 时返回的顶层 `effective_budget.consumed_amount`（本月至今，单位 USD）。该接口每个用户需单独请求一次，脚本已内置每次请求间隔 1 秒的限流。
+
+### 2.6 参数
 
 | 参数 | 说明 |
 |------|------|
@@ -123,15 +180,17 @@ python batch_set_budgets.py --list
 | `--token` | GitHub PAT（需要相应的 billing 权限） |
 | `--config` | CSV 配置文件路径（默认 `config.csv`） |
 | `--list` | 列出所有现有用户预算 |
+| `--usage` | 统计每个用户预算的已使用量（预算/已用/剩余/使用率） |
 | `--dry-run` | 仅预览，不实际执行 |
 
-### 2.6 API 说明
+### 2.7 API 说明
 
 使用 GitHub REST API (版本 `2026-03-10`)：
 
 #### API 端点
 
 - `GET /enterprises/{enterprise}/settings/billing/budgets` - 列出现有预算
+- `GET /enterprises/{enterprise}/settings/billing/budgets?scope=user&user={login}` - 查询单个用户已使用量（返回 `effective_budget.consumed_amount`）
 - `POST /enterprises/{enterprise}/settings/billing/budgets` - 创建预算
 - `PATCH /enterprises/{enterprise}/settings/billing/budgets/{budget_id}` - 更新预算
 
