@@ -83,6 +83,20 @@ def get_headers(token: str) -> dict:
     }
 
 
+def _print_curl(url: str, headers: dict, params: dict) -> None:
+    """Print the equivalent curl command for a GET request."""
+    qs = "&".join(f"{k}={v}" for k, v in params.items())
+    full_url = f"{url}?{qs}" if qs else url
+    print("# Request")
+    print("curl -L \\")
+    print("  -X GET \\")
+    for key, value in headers.items():
+        display_value = "Bearer ***" if key == "Authorization" else value
+        print(f'  -H "{key}: {display_value}" \\')
+    print(f"  \"{full_url}\"")
+    print()
+
+
 def build_cost_centers_url(enterprise: str) -> str:
     """Build the base cost-centers URL for an enterprise."""
     return f"{API_BASE}/enterprises/{enterprise}/settings/billing/cost-centers"
@@ -96,7 +110,9 @@ def list_cost_centers(token: str, enterprise: str) -> list[dict]:
     page = 1
 
     while True:
-        resp = requests.get(base_url, headers=headers, params={"page": page, "per_page": 100})
+        params = {"page": page, "per_page": 100}
+        _print_curl(base_url, headers, params)
+        resp = requests.get(base_url, headers=headers, params=params)
         if resp.status_code == 200:
             data = resp.json()
             # API may return either a list or an object with a "costCenters"/"cost_centers" key.
@@ -131,7 +147,9 @@ def dump_raw_cost_centers(token: str, enterprise: str):
     page = 1
 
     while True:
-        resp = requests.get(base_url, headers=headers, params={"page": page, "per_page": 100})
+        params = {"page": page, "per_page": 100}
+        _print_curl(base_url, headers, params)
+        resp = requests.get(base_url, headers=headers, params=params)
         print(f"# ---- GET {base_url}?page={page}&per_page=100 -> HTTP {resp.status_code} ----")
         try:
             body = resp.json()
