@@ -39,7 +39,7 @@ flowchart TD
 
 | 功能 | 脚本 | 章节 |
 |------|------|------|
-| 批量为用户设置 Budget（差异化金额） | `batch_set_budgets.py` | [2](#2-批量为用户设置-budget) |
+| 批量为用户设置个人级别 Budget | `batch_set_budgets.py` | [2](#2-批量为用户设置个人级别-budget) |
 | 为成本中心启用单独的 AI Credit Pool | `enable_ai_credit_pool.py` | [3](#3-为成本中心启用单独的-ai-credit-pool) |
 | 为成本中心设置统一的 User-Level Budget | `set_cost_center_budgets.py` | [4](#4-为成本中心设置统一的-user-level-budget) |
 
@@ -115,9 +115,9 @@ python enable_ai_credit_pool.py --list
 
 ---
 
-## 2. 批量为用户设置 Budget
+## 2. 批量为用户设置个人级别 Budget
 
-脚本：`batch_set_budgets.py`，为企业用户批量设置 User-Level Budget（差异化金额）。
+脚本：`batch_set_budgets.py`，为企业用户批量设置个人级别 User-Level Budget。
 
 ### 2.1 配置 CSV 文件
 
