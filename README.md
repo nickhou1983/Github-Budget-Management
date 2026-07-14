@@ -50,7 +50,7 @@ flowchart TD
 
 | 功能 | 脚本 | 章节 |
 |------|------|------|
-| 批量为用户设置个人级别 Budget | `batch_set_budgets.py` | [2](#2-批量为用户设置个人级别-budget) |
+| 批量为用户设置个人级别 Budget（含用量统计） | `batch_set_budgets.py` | [2](#2-批量为用户设置个人级别-budget) |
 | 为成本中心启用单独的 AI Credit Pool | `enable_ai_credit_pool.py` | [3](#3-为成本中心启用单独的-ai-credit-pool) |
 | 为成本中心设置统一的 User-Level Budget | `set_cost_center_budgets.py` | [4](#4-为成本中心设置统一的-user-level-budget) |
 
@@ -188,6 +188,7 @@ python batch_set_budgets.py --usage
 | 参数 | 说明 |
 |------|------|
 | `--enterprise` | GitHub Enterprise 名称（未配置 `settings.ini` 时必填） |
+| `--org` | GitHub Organization 名称（与 `--enterprise` 互斥） |
 | `--token` | GitHub PAT（需要相应的 billing 权限） |
 | `--config` | CSV 配置文件路径（默认 `config.csv`） |
 | `--list` | 列出所有现有用户预算 |
@@ -267,12 +268,6 @@ python batch_set_budgets.py --usage
 ---
 
 ## 3. 为成本中心启用单独的 AI Credit Pool
-
-> **功能预告（计划于 2026 年 7 月 1 日前发布）**
->
-> 该功能可为每个成本中心启用**独立的 AI Credit Pool**，使不同成本中心各自使用归属到自己 License 的 AI Credits，**避免不同成本中心之间对 AI Credits 池的争抢**。
->
-> 功能预计在 7 月 1 日前正式发布。本脚本是用于通过 REST API 进行配置的示例脚本，**供大家提前了解与熟悉**，正式发布后即可直接使用。
 
 脚本：`enable_ai_credit_pool.py`，根据 **Cost Center 名称** 批量启用（或关闭）AI Credit Pool。启用后，该 Cost Center 仅可使用由归属到它的 License 所提供的 AI Credits。额度由系统自动计算：
 
@@ -434,9 +429,12 @@ python set_cost_center_budgets.py --name "IT" --amount 50
 
 | 参数 | 说明 |
 |------|------|
+| `--enterprise` | GitHub Enterprise 名称（未配置 `settings.ini` 时必填） |
+| `--token` | GitHub PAT（需要 `manage_billing:enterprise` 权限） |
 | `--config` | CSV 文件路径（`成本中心名称,金额`） |
 | `--name` | 单个成本中心名称（需配合 `--amount`） |
 | `--amount` | 每用户每月预算金额（USD），用于 `--name` |
+| `--create` | 强制使用 POST 创建（跳过更新逻辑） |
 | `--list` | 列出已有成本中心预算 |
 | `--dry-run` | 仅预览，不实际执行 |
 
