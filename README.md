@@ -50,7 +50,7 @@ flowchart TD
 
 | 功能 | 脚本 | 章节 |
 |------|------|------|
-| 批量为用户设置个人级别 Budget（含用量统计） | `batch_set_budgets.py` | [2](#2-批量为用户设置个人级别-budget) |
+| 批量为用户设置个人级别 Budget（含用量统计） | `set_user_budget.py` | [2](#2-批量为用户设置个人级别-budget) |
 | 为成本中心启用单独的 AI Credit Pool | `enable_ai_credit_pool.py` | [3](#3-为成本中心启用单独的-ai-credit-pool) |
 | 为成本中心设置统一的 User-Level Budget | `set_cost_center_budgets.py` | [4](#4-为成本中心设置统一的-user-level-budget) |
 
@@ -106,7 +106,7 @@ token = ghp_xxx
 配置后即可省略 `--enterprise` 与 `--token`：
 
 ```bash
-python batch_set_budgets.py --list
+python set_user_budget.py --list
 python enable_ai_credit_pool.py --list
 ```
 
@@ -119,7 +119,7 @@ python enable_ai_credit_pool.py --list
 - 建议通过环境变量传递 token：
   ```bash
   export GITHUB_TOKEN=ghp_xxx
-  python batch_set_budgets.py
+  python set_user_budget.py
   ```
 - 定期轮换 token，设置合理的过期时间
 - 遵循最小权限原则，仅授予必要的 scope
@@ -128,7 +128,7 @@ python enable_ai_credit_pool.py --list
 
 ## 2. 批量为用户设置个人级别 Budget
 
-脚本：`batch_set_budgets.py`，为企业用户批量设置个人级别 User-Level Budget。
+脚本：`set_user_budget.py`，为企业用户批量设置个人级别 User-Level Budget。
 
 ### 2.1 配置 CSV 文件
 
@@ -146,19 +146,19 @@ intern1,50
 ### 2.2 预览（Dry Run）
 
 ```bash
-python batch_set_budgets.py --dry-run
+python set_user_budget.py --dry-run
 ```
 
 ### 2.3 执行
 
 ```bash
-python batch_set_budgets.py --config config.csv
+python set_user_budget.py --config config.csv
 ```
 
 ### 2.4 列出所有用户预算
 
 ```bash
-python batch_set_budgets.py --list
+python set_user_budget.py --list
 ```
 
 ### 2.5 统计每个用户预算的已使用量
@@ -166,7 +166,7 @@ python batch_set_budgets.py --list
 按用户逐个查询本月已消耗金额（`consumed_amount`），输出预算、已用、剩余与使用率：
 
 ```bash
-python batch_set_budgets.py --usage
+python set_user_budget.py --usage
 ```
 
 示例输出（数值为示意）：
