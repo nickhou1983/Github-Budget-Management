@@ -89,30 +89,6 @@ def get_headers(token: str) -> dict:
     }
 
 
-def _print_curl(
-    method: str,
-    url: str,
-    headers: dict,
-    params: dict | None = None,
-    payload: dict | None = None,
-) -> None:
-    """Print the equivalent curl command for a GitHub API request."""
-    params = params or {}
-    qs = "&".join(f"{k}={v}" for k, v in params.items())
-    full_url = f"{url}?{qs}" if qs else url
-
-    print("# Request")
-    print("curl -L \\")
-    print(f"  -X {method} \\")
-    for key, value in headers.items():
-        display_value = "Bearer ***" if key == "Authorization" else value
-        print(f'  -H "{key}: {display_value}" \\')
-    if payload is not None:
-        print(f"  -d '{json.dumps(payload, ensure_ascii=False)}' \\")
-    print(f"  \"{full_url}\"")
-    print()
-
-
 def build_budgets_url(org: str | None = None, enterprise: str | None = None) -> str:
     """Build the base budgets URL for org or enterprise."""
     if enterprise:
@@ -131,7 +107,6 @@ def list_existing_budgets(
 
     while True:
         params = {"page": page, "per_page": 10, "scope": "user"}
-        _print_curl("GET", base_url, headers, params=params)
         resp = requests.get(base_url, headers=headers, params=params)
         if resp.status_code == 200:
             data = resp.json()
@@ -178,7 +153,6 @@ def get_user_consumed(
     base_url = build_budgets_url(org=org, enterprise=enterprise)
     headers = get_headers(token)
     params = {"scope": "user", "user": username, "per_page": 10}
-    _print_curl("GET", base_url, headers, params=params)
     resp = requests.get(
         base_url,
         headers=headers,
@@ -216,7 +190,6 @@ def create_user_budget(
         },
         "user": username,
     }
-    _print_curl("POST", url, headers, payload=payload)
     resp = requests.post(url, headers=headers, json=payload)
     return {"status": resp.status_code, "body": resp.json() if resp.content else {}}
 
@@ -237,7 +210,6 @@ def update_user_budget(
         "budget_amount": amount,
         "prevent_further_usage": True,
     }
-    _print_curl("PATCH", url, headers, payload=payload)
     resp = requests.patch(url, headers=headers, json=payload)
     return {"status": resp.status_code, "body": resp.json() if resp.content else {}}
 
